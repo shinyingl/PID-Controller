@@ -39,7 +39,8 @@ int main() {
   /**
    * TODO: Initialize the pid variable.
    */
-  pid.Init(0.01, 0.01, 0.0); //(Kp, Ki, Kd)
+  
+   pid.Init(0.04, 0.0001, 5.0); //(Kp, Ki, Kd)
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
@@ -78,8 +79,8 @@ int main() {
           }
 
           std::cout << "speed: " << speed << std::endl;
-          throttle = 1/(speed+1);
-          // throttle = (1 - std::abs(steer_value)) * 0.5 + 0.3;//0.3;
+          // throttle = 3;//1/(speed+1);
+          throttle = (1 - std::abs(steer_value)) * 0.5 + 0.2;//0.3;
 
           
           // DEBUG
