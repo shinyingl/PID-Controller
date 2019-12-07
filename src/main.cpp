@@ -35,14 +35,18 @@ string hasData(string s) {
 int main() {
   uWS::Hub h;
 
-  PID pid;
+  PID steer_pid;
+  PID speed_pid;
   /**
    * TODO: Initialize the pid variable.
    */
   
-   pid.Init(0.04, 0.0001, 5.0); //(Kp, Ki, Kd)
+  // steer_pid.Init(0.05, 0.0001, 5.0); //(Kp, Ki, Kd) // doesn't turn fast enough, fall in water
+  // steer_pid.Init(0.5, 0.0001, 5.0); //follow the track but with a lot of occilation
+  steer_pid.Init(0.1, 0.0001, 5.0); // ok, marginal turn
+  speed_pid.Init(0.1, 0.0001, 5.0); //(Kp, Ki, Kd)
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
+  h.onMessage([&steer_pid, &speed_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -62,15 +66,17 @@ int main() {
           double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
           double throttle;
+          double cte_speed;
+          double speed_target;
           /**
            * TODO: Calculate steering value here, remember the steering value is
            *   [-1, 1].
            * NOTE: Feel free to play around with the throttle and speed.
            *   Maybe use another PID controller to control the speed!
            */
-          pid.UpdateError(cte);
-          steer_value = pid.TotalError();
-          //limit steer angel between -pi/4 to pi/4?
+          steer_pid.UpdateError(cte);
+          steer_value = steer_pid.TotalError();
+          //limit steer angel between -pi/4 to pi/4
           if(steer_value > max_steering_angle) {
             steer_value = max_steering_angle;
           }
@@ -78,12 +84,16 @@ int main() {
             steer_value = -max_steering_angle;
           }
 
-          std::cout << "speed: " << speed << std::endl;
+          speed_target = 30. * (1. - abs(steer_value)) + 10.;
+          cte_speed = speed - speed_target;
+          speed_pid.UpdateError(cte_speed);
+          throttle = speed_pid.TotalError();
           // throttle = 3;//1/(speed+1);
-          throttle = (1 - std::abs(steer_value)) * 0.5 + 0.2;//0.3;
+          // throttle = (1 - std::abs(steer_value)) * 0.5 + 0.2;//0.3;
 
           
           // DEBUG
+          std::cout << "speed: " << speed << std::endl;
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
                     << std::endl;
 

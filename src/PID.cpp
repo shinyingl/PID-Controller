@@ -8,11 +8,11 @@ PID::PID() {}
 
 PID::~PID() {}
 
-void PID::Init(double Kp_, double Ki_, double Kd_) {
+void PID::Init(double Kp, double Ki, double Kd) {
   /* Initialize PID coefficients */
-  Kp = Kp_; //proportional
-  Ki = Ki_; //integral
-  Kd = Kd_; //derivate
+  this->Kp = Kp; //proportional
+  this->Ki = Ki; //integral
+  this->Kd = Kd; //derivate
 
   p_error = 0;
   i_error = 0;
