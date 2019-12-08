@@ -14,7 +14,21 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-double max_steering_angle = pi()*.25; //45 degree
+#define KONST_p 0.2 // 0.1 marginal turn
+#define KONST_i 0.001 // 0.01,0.001 slow; 0.1, 0.005 vibrate
+#define KONST_d 6.0 //5.0; 0.0 vibrate
+#define MAX_ANGLE (pi()*.25) //45 degree
+#define MAX_SPEED 40.0
+#define MIN_SPEED 0.0  
+#define MAX_STEER (pi()*.25) //45 degree
+
+// slow but working
+// #define KONST_p 0.1 // marginal turn
+// #define KONST_i 0.0001
+// #define KONST_d 5.0 
+// #define MAX_ANGLE (pi()*.25) //45 degree
+// #define MAX_SPEED 40.0
+// #define MIN_SPEED 0.0  
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -42,9 +56,9 @@ int main() {
    */
   
   // steer_pid.Init(0.05, 0.0001, 5.0); //(Kp, Ki, Kd) // doesn't turn fast enough, fall in water
-  // steer_pid.Init(0.5, 0.0001, 5.0); //follow the track but with a lot of occilation
-  steer_pid.Init(0.1, 0.0001, 5.0); // ok, marginal turn
-  speed_pid.Init(0.1, 0.0001, 5.0); //(Kp, Ki, Kd)
+  // steer_pid.Init(0.5, 0.0001, 5.0); //follow the track but with a lot of occsilation
+  steer_pid.Init(KONST_p, KONST_i, KONST_d, MAX_ANGLE, -MAX_ANGLE); 
+  speed_pid.Init(KONST_p, KONST_i, KONST_d, MAX_SPEED,  MIN_SPEED); //(Kp, Ki, Kd)
 
   h.onMessage([&steer_pid, &speed_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
@@ -77,14 +91,14 @@ int main() {
           steer_pid.UpdateError(cte);
           steer_value = steer_pid.TotalError();
           //limit steer angel between -pi/4 to pi/4
-          if(steer_value > max_steering_angle) {
-            steer_value = max_steering_angle;
+          if(steer_value > MAX_STEER) {
+            steer_value = MAX_STEER;
           }
-          if(steer_value < -max_steering_angle) {
-            steer_value = -max_steering_angle;
+          if(steer_value < -MAX_STEER) {
+            steer_value = -MAX_STEER;
           }
 
-          speed_target = 30. * (1. - abs(steer_value)) + 10.;
+          speed_target = 30. * (1. - 0.1*abs(steer_value)) + 10.;
           cte_speed = speed - speed_target;
           speed_pid.UpdateError(cte_speed);
           throttle = speed_pid.TotalError();
@@ -93,15 +107,19 @@ int main() {
 
           
           // DEBUG
-          std::cout << "speed: " << speed << std::endl;
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
-                    << std::endl;
+          std::cout << speed_target <<","<< speed <<","<< cte_speed <<","<< steer_value <<","<< cte <<std::endl;
+
+
+          // std::cout << "speed: " << speed << std::endl;
+          // std::cout << "speed_target: " << speed_target << std::endl;
+          // std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
+          //           << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if
       } else {
