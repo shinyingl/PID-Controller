@@ -14,21 +14,13 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-#define KONST_p 0.2 // 0.1 marginal turn
+#define KONST_p 0.2 // 0.1 marginal turn, 0.2 ok
 #define KONST_i 0.001 // 0.01,0.001 slow; 0.1, 0.005 vibrate
-#define KONST_d 6.0 //5.0; 0.0 vibrate
+#define KONST_d 6.0 //5.0; 0.0 vibrate // damping term. too much will include noise
 #define MAX_ANGLE (pi()*.25) //45 degree
-#define MAX_SPEED 40.0
+#define MAX_SPEED 100.0
 #define MIN_SPEED 0.0  
 #define MAX_STEER (pi()*.25) //45 degree
-
-// slow but working
-// #define KONST_p 0.1 // marginal turn
-// #define KONST_i 0.0001
-// #define KONST_d 5.0 
-// #define MAX_ANGLE (pi()*.25) //45 degree
-// #define MAX_SPEED 40.0
-// #define MIN_SPEED 0.0  
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -51,14 +43,10 @@ int main() {
 
   PID steer_pid;
   PID speed_pid;
-  /**
-   * TODO: Initialize the pid variable.
-   */
   
-  // steer_pid.Init(0.05, 0.0001, 5.0); //(Kp, Ki, Kd) // doesn't turn fast enough, fall in water
-  // steer_pid.Init(0.5, 0.0001, 5.0); //follow the track but with a lot of occsilation
+  //Initialize the pid variable
   steer_pid.Init(KONST_p, KONST_i, KONST_d, MAX_ANGLE, -MAX_ANGLE); 
-  speed_pid.Init(KONST_p, KONST_i, KONST_d, MAX_SPEED,  MIN_SPEED); //(Kp, Ki, Kd)
+  speed_pid.Init(KONST_p, KONST_i, KONST_d, MAX_SPEED,  MIN_SPEED);
 
   h.onMessage([&steer_pid, &speed_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
@@ -82,14 +70,10 @@ int main() {
           double throttle;
           double cte_speed;
           double speed_target;
-          /**
-           * TODO: Calculate steering value here, remember the steering value is
-           *   [-1, 1].
-           * NOTE: Feel free to play around with the throttle and speed.
-           *   Maybe use another PID controller to control the speed!
-           */
+          
+          // steering angle PID
           steer_pid.UpdateError(cte);
-          steer_value = steer_pid.TotalError();
+          steer_value = steer_pid.TotalError();  
           //limit steer angel between -pi/4 to pi/4
           if(steer_value > MAX_STEER) {
             steer_value = MAX_STEER;
@@ -98,18 +82,15 @@ int main() {
             steer_value = -MAX_STEER;
           }
 
-          speed_target = 30. * (1. - 0.1*abs(steer_value)) + 10.;
+          // throttle PID
+          speed_target = 90. * (1. - 0.1*abs(steer_value)) + 10.;
           cte_speed = speed - speed_target;
           speed_pid.UpdateError(cte_speed);
           throttle = speed_pid.TotalError();
-          // throttle = 3;//1/(speed+1);
-          // throttle = (1 - std::abs(steer_value)) * 0.5 + 0.2;//0.3;
 
           
           // DEBUG
           std::cout << speed_target <<","<< speed <<","<< cte_speed <<","<< steer_value <<","<< cte <<std::endl;
-
-
           // std::cout << "speed: " << speed << std::endl;
           // std::cout << "speed_target: " << speed_target << std::endl;
           // std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
